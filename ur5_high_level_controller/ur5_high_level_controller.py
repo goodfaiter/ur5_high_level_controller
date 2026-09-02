@@ -5,6 +5,19 @@ from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Joy
 
 
+# PS4 joy message indices used by the actuator_high_level_controller.
+_AXIS_LINEAR_X = 0
+_AXIS_LINEAR_Y = 1
+_AXIS_ANGULAR_Z = 3
+
+_BUTTON_R1 = 5
+_BUTTON_R2 = 7
+_BUTTON_DPAD_LEFT = 15
+_BUTTON_DPAD_RIGHT = 16
+_BUTTON_DPAD_UP = 13
+_BUTTON_DPAD_DOWN = 14
+
+
 class UR5HighLevelController(Node):
     def __init__(self):
         super().__init__("ur5_high_level_controller")
@@ -40,42 +53,6 @@ class UR5HighLevelController(Node):
             self.declare_parameter("publish_rate", 50.0).get_parameter_value().double_value
         )
 
-        self.axis_linear_x = (
-            self.declare_parameter("axis_linear_x", 0).get_parameter_value().integer_value
-        )
-        self.axis_linear_y = (
-            self.declare_parameter("axis_linear_y", 1).get_parameter_value().integer_value
-        )
-        self.axis_angular_z = (
-            self.declare_parameter("axis_angular_z", 3).get_parameter_value().integer_value
-        )
-
-        self.button_r1 = (
-            self.declare_parameter("button_r1", 5).get_parameter_value().integer_value
-        )
-        self.button_r2 = (
-            self.declare_parameter("button_r2", 7).get_parameter_value().integer_value
-        )
-        self.button_dpad_left = (
-            self.declare_parameter("button_dpad_left", 15).get_parameter_value().integer_value
-        )
-        self.button_dpad_right = (
-            self.declare_parameter("button_dpad_right", 16).get_parameter_value().integer_value
-        )
-        self.button_dpad_up = (
-            self.declare_parameter("button_dpad_up", 13).get_parameter_value().integer_value
-        )
-        self.button_dpad_down = (
-            self.declare_parameter("button_dpad_down", 14).get_parameter_value().integer_value
-        )
-
-        self.invert_linear_y = (
-            self.declare_parameter("invert_linear_y", False).get_parameter_value().bool_value
-        )
-        self.invert_angular_z = (
-            self.declare_parameter("invert_angular_z", False).get_parameter_value().bool_value
-        )
-
     def _setup_publishers_subscribers(self):
         self.joystick_subscription = self.create_subscription(
             Joy, self.joystick_topic, self._joystick_callback, 10
@@ -93,13 +70,10 @@ class UR5HighLevelController(Node):
             return 0.0
         return value
 
-    def _get_axis(self, msg: Joy, index: int, invert: bool = False) -> float:
+    def _get_axis(self, msg: Joy, index: int) -> float:
         if index < 0 or index >= len(msg.axes):
             return 0.0
-        value = msg.axes[index]
-        if invert:
-            value = -value
-        return self._apply_deadzone(value, self.deadzone)
+        return self._apply_deadzone(msg.axes[index], self.deadzone)
 
     def _get_button(self, msg: Joy, index: int) -> bool:
         if index < 0 or index >= len(msg.buttons):
@@ -112,29 +86,29 @@ class UR5HighLevelController(Node):
         if self._latest_joy is not None:
             msg = self._latest_joy
 
-            vx = self._get_axis(msg, self.axis_linear_x) * self.max_linear_velocity
-            vy = self._get_axis(msg, self.axis_linear_y, self.invert_linear_y) * self.max_linear_velocity
+            vx = self._get_axis(msg, _AXIS_LINEAR_X) * self.max_linear_velocity
+            vy = self._get_axis(msg, _AXIS_LINEAR_Y) * self.max_linear_velocity
 
-            if self._get_button(msg, self.button_r2):
+            if self._get_button(msg, _BUTTON_R2):
                 vz = self.max_linear_velocity
-            elif self._get_button(msg, self.button_r1):
+            elif self._get_button(msg, _BUTTON_R1):
                 vz = -self.max_linear_velocity
             else:
                 vz = 0.0
 
             roll = 0.0
-            if self._get_button(msg, self.button_dpad_right):
+            if self._get_button(msg, _BUTTON_DPAD_RIGHT):
                 roll = self.max_angular_velocity
-            elif self._get_button(msg, self.button_dpad_left):
+            elif self._get_button(msg, _BUTTON_DPAD_LEFT):
                 roll = -self.max_angular_velocity
 
             pitch = 0.0
-            if self._get_button(msg, self.button_dpad_up):
+            if self._get_button(msg, _BUTTON_DPAD_UP):
                 pitch = self.max_angular_velocity
-            elif self._get_button(msg, self.button_dpad_down):
+            elif self._get_button(msg, _BUTTON_DPAD_DOWN):
                 pitch = -self.max_angular_velocity
 
-            yaw = self._get_axis(msg, self.axis_angular_z, self.invert_angular_z) * self.max_angular_velocity
+            yaw = self._get_axis(msg, _AXIS_ANGULAR_Z) * self.max_angular_velocity
 
             twist.linear.x = float(np.clip(vx, -self.max_linear_velocity, self.max_linear_velocity))
             twist.linear.y = float(np.clip(vy, -self.max_linear_velocity, self.max_linear_velocity))
