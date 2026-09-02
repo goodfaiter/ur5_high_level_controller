@@ -11,10 +11,10 @@ _AXIS_ANGULAR_Z = 3
 
 _BUTTON_R1 = 7
 _BUTTON_R2 = 5
-_BUTTON_DPAD_LEFT = 15
-_BUTTON_DPAD_RIGHT = 16
-_BUTTON_DPAD_UP = 13
-_BUTTON_DPAD_DOWN = 14
+_BUTTON_DPAD_LEFT = 13
+_BUTTON_DPAD_RIGHT = 14
+_BUTTON_DPAD_UP = 11
+_BUTTON_DPAD_DOWN = 12
 
 
 class UR5HighLevelController(Node):
@@ -35,8 +35,8 @@ class UR5HighLevelController(Node):
             self.declare_parameter("desired_velocity_topic", "/desired_velocity").get_parameter_value().string_value
         )
 
-        self.max_linear_velocity = self.declare_parameter("max_linear_velocity", 0.25).get_parameter_value().double_value
-        self.max_angular_velocity = self.declare_parameter("max_angular_velocity", 0.1).get_parameter_value().double_value
+        self.max_linear_velocity = self.declare_parameter("max_linear_velocity", 0.1).get_parameter_value().double_value
+        self.max_angular_velocity = self.declare_parameter("max_angular_velocity", 0.2).get_parameter_value().double_value
         self.deadzone = self.declare_parameter("deadzone", 0.05).get_parameter_value().double_value
         self.publish_rate = self.declare_parameter("publish_rate", 50.0).get_parameter_value().double_value
 
