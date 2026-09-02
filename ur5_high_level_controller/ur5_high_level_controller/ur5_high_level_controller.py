@@ -4,14 +4,13 @@ from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Joy
 
-
 # PS4 joy message indices used by the actuator_high_level_controller.
-_AXIS_LINEAR_X = 0
-_AXIS_LINEAR_Y = 1
+_AXIS_LINEAR_X = 1
+_AXIS_LINEAR_Y = 0
 _AXIS_ANGULAR_Z = 3
 
-_BUTTON_R1 = 5
-_BUTTON_R2 = 7
+_BUTTON_R1 = 7
+_BUTTON_R2 = 5
 _BUTTON_DPAD_LEFT = 15
 _BUTTON_DPAD_RIGHT = 16
 _BUTTON_DPAD_UP = 13
@@ -31,35 +30,19 @@ class UR5HighLevelController(Node):
         self.control_timer = self.create_timer(publish_period, self._control_callback)
 
     def _declare_parameters(self):
-        self.joystick_topic = (
-            self.declare_parameter("joystick_topic", "/joy").get_parameter_value().string_value
-        )
+        self.joystick_topic = self.declare_parameter("joystick_topic", "/joy").get_parameter_value().string_value
         self.desired_velocity_topic = (
-            self.declare_parameter("desired_velocity_topic", "/desired_velocity")
-            .get_parameter_value()
-            .string_value
+            self.declare_parameter("desired_velocity_topic", "/desired_velocity").get_parameter_value().string_value
         )
 
-        self.max_linear_velocity = (
-            self.declare_parameter("max_linear_velocity", 0.1).get_parameter_value().double_value
-        )
-        self.max_angular_velocity = (
-            self.declare_parameter("max_angular_velocity", 0.1).get_parameter_value().double_value
-        )
-        self.deadzone = (
-            self.declare_parameter("deadzone", 0.05).get_parameter_value().double_value
-        )
-        self.publish_rate = (
-            self.declare_parameter("publish_rate", 50.0).get_parameter_value().double_value
-        )
+        self.max_linear_velocity = self.declare_parameter("max_linear_velocity", 0.25).get_parameter_value().double_value
+        self.max_angular_velocity = self.declare_parameter("max_angular_velocity", 0.1).get_parameter_value().double_value
+        self.deadzone = self.declare_parameter("deadzone", 0.05).get_parameter_value().double_value
+        self.publish_rate = self.declare_parameter("publish_rate", 50.0).get_parameter_value().double_value
 
     def _setup_publishers_subscribers(self):
-        self.joystick_subscription = self.create_subscription(
-            Joy, self.joystick_topic, self._joystick_callback, 10
-        )
-        self.desired_velocity_publisher = self.create_publisher(
-            Twist, self.desired_velocity_topic, 10
-        )
+        self.joystick_subscription = self.create_subscription(Joy, self.joystick_topic, self._joystick_callback, 10)
+        self.desired_velocity_publisher = self.create_publisher(Twist, self.desired_velocity_topic, 10)
 
     def _joystick_callback(self, msg: Joy):
         self._latest_joy = msg
@@ -86,8 +69,8 @@ class UR5HighLevelController(Node):
         if self._latest_joy is not None:
             msg = self._latest_joy
 
-            vx = self._get_axis(msg, _AXIS_LINEAR_X) * self.max_linear_velocity
-            vy = self._get_axis(msg, _AXIS_LINEAR_Y) * self.max_linear_velocity
+            vx = -1.0 * self._get_axis(msg, _AXIS_LINEAR_X) * self.max_linear_velocity
+            vy = -1.0 * self._get_axis(msg, _AXIS_LINEAR_Y) * self.max_linear_velocity
 
             if self._get_button(msg, _BUTTON_R2):
                 vz = self.max_linear_velocity
