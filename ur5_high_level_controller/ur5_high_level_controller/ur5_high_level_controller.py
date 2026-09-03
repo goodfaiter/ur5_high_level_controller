@@ -3,14 +3,16 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Joy
+from std_msgs.msg import Float32
 
 # PS4 joy message indices used by the actuator_high_level_controller.
 _AXIS_LINEAR_X = 1
 _AXIS_LINEAR_Y = 0
 _AXIS_ANGULAR_Z = 3
+_AXIS_R2 = 5
 
+_BUTTON_L1 = 6
 _BUTTON_R1 = 7
-_BUTTON_R2 = 5
 _BUTTON_DPAD_LEFT = 13
 _BUTTON_DPAD_RIGHT = 14
 _BUTTON_DPAD_UP = 11
@@ -34,6 +36,9 @@ class UR5HighLevelController(Node):
         self.desired_velocity_topic = (
             self.declare_parameter("desired_velocity_topic", "/desired_velocity").get_parameter_value().string_value
         )
+        self.desired_position_topic = (
+            self.declare_parameter("desired_position_topic", "/desired_position_rad").get_parameter_value().string_value
+        )
 
         self.max_linear_velocity = self.declare_parameter("max_linear_velocity", 0.1).get_parameter_value().double_value
         self.max_angular_velocity = self.declare_parameter("max_angular_velocity", 0.2).get_parameter_value().double_value
@@ -43,6 +48,7 @@ class UR5HighLevelController(Node):
     def _setup_publishers_subscribers(self):
         self.joystick_subscription = self.create_subscription(Joy, self.joystick_topic, self._joystick_callback, 10)
         self.desired_velocity_publisher = self.create_publisher(Twist, self.desired_velocity_topic, 10)
+        self.desired_position_publisher = self.create_publisher(Float32, self.desired_position_topic, 10)
 
     def _joystick_callback(self, msg: Joy):
         self._latest_joy = msg
@@ -65,6 +71,7 @@ class UR5HighLevelController(Node):
 
     def _control_callback(self):
         twist = Twist()
+        position = Float32()
 
         if self._latest_joy is not None:
             msg = self._latest_joy
@@ -72,9 +79,9 @@ class UR5HighLevelController(Node):
             vx = -1.0 * self._get_axis(msg, _AXIS_LINEAR_X) * self.max_linear_velocity
             vy = -1.0 * self._get_axis(msg, _AXIS_LINEAR_Y) * self.max_linear_velocity
 
-            if self._get_button(msg, _BUTTON_R2):
+            if self._get_button(msg, _BUTTON_R1):
                 vz = self.max_linear_velocity
-            elif self._get_button(msg, _BUTTON_R1):
+            elif self._get_button(msg, _BUTTON_L1):
                 vz = -self.max_linear_velocity
             else:
                 vz = 0.0
@@ -100,7 +107,11 @@ class UR5HighLevelController(Node):
             twist.angular.y = float(np.clip(pitch, -self.max_angular_velocity, self.max_angular_velocity))
             twist.angular.z = float(np.clip(yaw, -self.max_angular_velocity, self.max_angular_velocity))
 
+            r2 = self._get_axis(msg, _AXIS_R2)
+            position.data = float(np.clip(r2, 0.0, 1.0)) * 2.0 * np.pi
+
         self.desired_velocity_publisher.publish(twist)
+        self.desired_position_publisher.publish(position)
 
 
 def main(args=None):
