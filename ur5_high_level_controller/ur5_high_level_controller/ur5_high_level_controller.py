@@ -9,14 +9,12 @@ from std_msgs.msg import Float32
 _AXIS_LINEAR_X = 1
 _AXIS_LINEAR_Y = 0
 _AXIS_ANGULAR_Z = 3
+_AXIS_DPAD_LEFT_RIGHT = 6
+_AXIS_DPAD_UP_DOWN = 7
 _AXIS_R2 = 5
 
-_BUTTON_L1 = 6
-_BUTTON_R1 = 7
-_BUTTON_DPAD_LEFT = 13
-_BUTTON_DPAD_RIGHT = 14
-_BUTTON_DPAD_UP = 11
-_BUTTON_DPAD_DOWN = 12
+_BUTTON_L1 = 4
+_BUTTON_R1 = 5
 
 
 class UR5HighLevelController(Node):
@@ -76,6 +74,8 @@ class UR5HighLevelController(Node):
         if self._latest_joy is not None:
             msg = self._latest_joy
 
+            # self.get_logger().info(f"Joystick message: {msg}")
+
             vx = -1.0 * self._get_axis(msg, _AXIS_LINEAR_X) * self.max_linear_velocity
             vy = -1.0 * self._get_axis(msg, _AXIS_LINEAR_Y) * self.max_linear_velocity
 
@@ -86,18 +86,8 @@ class UR5HighLevelController(Node):
             else:
                 vz = 0.0
 
-            roll = 0.0
-            if self._get_button(msg, _BUTTON_DPAD_RIGHT):
-                roll = self.max_angular_velocity
-            elif self._get_button(msg, _BUTTON_DPAD_LEFT):
-                roll = -self.max_angular_velocity
-
-            pitch = 0.0
-            if self._get_button(msg, _BUTTON_DPAD_UP):
-                pitch = self.max_angular_velocity
-            elif self._get_button(msg, _BUTTON_DPAD_DOWN):
-                pitch = -self.max_angular_velocity
-
+            roll = 1.0 * self._get_axis(msg, _AXIS_DPAD_LEFT_RIGHT) * self.max_angular_velocity
+            pitch = 1.0 * self._get_axis(msg, _AXIS_DPAD_UP_DOWN) * self.max_angular_velocity
             yaw = self._get_axis(msg, _AXIS_ANGULAR_Z) * self.max_angular_velocity
 
             twist.linear.x = float(np.clip(vx, -self.max_linear_velocity, self.max_linear_velocity))
@@ -108,7 +98,7 @@ class UR5HighLevelController(Node):
             twist.angular.z = float(np.clip(yaw, -self.max_angular_velocity, self.max_angular_velocity))
 
             r2 = self._get_axis(msg, _AXIS_R2)
-            position.data = float(np.clip(r2, 0.0, 1.0)) * 2.0 * np.pi
+            position.data = 2.0 * np.pi - float(np.clip(r2, 0.0, 1.0)) * 2.0 * np.pi
 
         self.desired_velocity_publisher.publish(twist)
         self.desired_position_publisher.publish(position)
